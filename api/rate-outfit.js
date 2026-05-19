@@ -3,7 +3,15 @@ export default async function handler(req, res) {
     if (req.method !== "POST") {
       return res.status(405).json({ error: "Method not allowed" });
     }
-
+    const usageMap = new Map();
+        const ip = req.headers["x-forwarded-for"] || "unknown";
+    const count = usageMap.get(ip) || 0;
+    
+    if (count >= 3) {
+      return res.status(403).json({ error: "Free limit reached" });
+    }
+    
+    usageMap.set(ip, count + 1);
     const body =
       typeof req.body === "string" ? JSON.parse(req.body) : req.body;
 
