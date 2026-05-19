@@ -14,34 +14,27 @@ export default async function handler(req, res) {
     }
 
     const prompt = `
-You are a world-class fashion critic.
+You are a fashion critic AI.
 
-Analyze the outfit and return ONLY valid JSON:
+Analyze this outfit image and respond ONLY in valid JSON:
 
 {
-  "score": 1-10,
-  "verdict": "GOOD FIT" or "BAD FIT",
-  "subtitle": "short label",
-  "feedback": "detailed fashion critique",
-  "good_tags": ["..."],
-  "bad_tags": ["..."]
+  "score": number from 1-10,
+  "verdict": short opinion (1 sentence),
+  "subtitle": "AI Style Analysis",
+  "feedback": detailed critique (2-4 sentences),
+  "good_tags": array of 2-4 strengths,
+  "bad_tags": array of 2-4 weaknesses
 }
 
-Rules:
-- Score must be realistic based on fashion sense
-- If score >= 7 → GOOD FIT
-- If score < 7 → BAD FIT
-- Be honest but not toxic
-- Return ONLY JSON, no extra text
+Be brutally honest but not rude.
 `;
 
-    const response = await fetch(
+    const geminiRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [
             {
@@ -49,7 +42,7 @@ Rules:
                 { text: prompt },
                 {
                   inline_data: {
-                    mime_type: imageMimeType || "image/jpeg",
+                    mime_type: imageMimeType,
                     data: imageBase64,
                   },
                 },
@@ -60,42 +53,36 @@ Rules:
       }
     );
 
-    const data = await response.json();
+    const data = await geminiRes.json();
 
-    // 🔥 IMPORTANT: show real error if Gemini fails
-    if (!response.ok) {
+    if (!geminiRes.ok) {
       return res.status(500).json({
         error: "Gemini API failed",
-        status: response.status,
         details: data,
       });
     }
 
-    const text =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!text) {
       return res.status(500).json({
         error: "No AI response",
-        details: data,
+        raw: data,
       });
     }
 
+    // clean JSON from AI output
     let parsed;
-
     try {
       parsed = JSON.parse(text);
-    } catch (err) {
+    } catch (e) {
       return res.status(500).json({
         error: "AI returned invalid JSON",
         raw: text,
       });
     }
 
-    parsed.score = Math.max(1, Math.min(10, parsed.score || 5));
-
     return res.status(200).json(parsed);
-
   } catch (err) {
     return res.status(500).json({
       error: "Server error",
