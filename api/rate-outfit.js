@@ -67,9 +67,10 @@ Rules:
 
     // 🔥 HANDLE API ERRORS PROPERLY
     if (!response.ok || data.error) {
-      return res.status(500).json({
+     return res.status(500).json({
         error: "Gemini API error",
-        details: data.error || data,
+        status: response.status,
+        details: data,
       });
     }
 
