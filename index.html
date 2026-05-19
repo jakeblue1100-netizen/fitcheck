@@ -1,10 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
-<<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FITCHECK — AI Outfit Rater</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&family=Syne+Mono&display=swap" rel="stylesheet">
+<head>
+ <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXX"
+     crossorigin="anonymous"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FITCHECK — AI Outfit Rater</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&family=Syne+Mono&display=swap" rel="stylesheet">
+
 <style>
 :root {
   --bg: #080808;
@@ -111,11 +115,6 @@ header {
   margin-top: 0.4rem;
 }
 
-.scan-counter { display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem; }
-.scan-counter-label { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--grey2); }
-.scan-pips { display: flex; gap: 6px; }
-.pip { width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--grey2); transition: all 0.3s; }
-.pip.used { background: var(--pink); border-color: var(--pink); box-shadow: 0 0 8px var(--pink-glow); }
 
 /* Hero */
 .hero { margin-bottom: 2.5rem; animation: fadeUp 0.6s ease both; }
@@ -253,30 +252,7 @@ header {
 #try-again-btn { display: none; margin-top: 1.5rem; background: none; border: 1px solid var(--border-bright); padding: 0.7rem 1.4rem; color: var(--grey); border-radius: 2px; cursor: pointer; font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; transition: all 0.2s; }
 #try-again-btn:hover { border-color: var(--pink); color: var(--pink); }
 
-/* Paywall Modal */
-.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 500; align-items: center; justify-content: center; padding: 1.5rem; backdrop-filter: blur(8px); }
-.modal-overlay.open { display: flex; }
 
-.modal { background: var(--surface); border: 1px solid var(--border-bright); border-radius: 2px; max-width: 460px; width: 100%; position: relative; overflow: hidden; animation: modalIn 0.35s cubic-bezier(0.16,1,0.3,1); }
-@keyframes modalIn { from { opacity:0; transform: scale(0.92) translateY(20px); } to { opacity:1; transform:none; } }
-.modal::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--pink), #9b5de5, var(--pink)); background-size: 200%; animation: gradientShift 3s linear infinite; }
-@keyframes gradientShift { to { background-position: 200% center; } }
-
-.modal-body { padding: 2.5rem 2rem; }
-.modal-eyebrow { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--pink); margin-bottom: 1rem; }
-.modal-title { font-family: var(--font-display); font-size: 2.5rem; letter-spacing: 0.03em; line-height: 1; margin-bottom: 0.8rem; }
-.modal-desc { color: var(--grey); font-size: 0.88rem; line-height: 1.6; margin-bottom: 2rem; }
-.price-row { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 1.5rem; }
-.price-amount { font-family: var(--font-display); font-size: 3rem; color: var(--white); line-height: 1; }
-.price-per { font-size: 0.8rem; color: var(--grey); }
-.perks { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 2rem; }
-.perk { display: flex; align-items: center; gap: 0.75rem; font-size: 0.88rem; color: #ccc; }
-.perk-dot { width: 6px; height: 6px; background: var(--pink); border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 8px var(--pink-glow); }
-
-.modal-cta { display: block; width: 100%; padding: 1rem; background: var(--pink); color: #fff; border: none; border-radius: 2px; font-family: var(--font-display); font-size: 1.4rem; letter-spacing: 0.08em; cursor: pointer; transition: all 0.2s; margin-bottom: 0.75rem; text-align: center; text-decoration: none; }
-.modal-cta:hover { background: #ff1a6a; box-shadow: 0 0 25px var(--pink-glow); }
-.modal-dismiss { display: block; width: 100%; padding: 0.7rem; background: none; border: 1px solid var(--border); color: var(--grey); border-radius: 2px; font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
-.modal-dismiss:hover { border-color: var(--grey); color: var(--white); }
 
 /* Footer */
 footer { border-top: 1px solid var(--border); padding: 1.5rem 0; margin-top: 4rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
@@ -290,7 +266,6 @@ footer { border-top: 1px solid var(--border); padding: 1.5rem 0; margin-top: 4re
   .aff-grid { grid-template-columns: 1fr 1fr; }
 }
 </style>
-<script src="https://js.stripe.com/v3/"></script>
 </head>
 <body>
 
@@ -301,14 +276,6 @@ footer { border-top: 1px solid var(--border); padding: 1.5rem 0; margin-top: 4re
     <div class="logo-wrap">
       <div class="logo">FIT<span class="logo-accent">CHECK</span></div>
       <div class="logo-sub">AI Fashion Intelligence</div>
-    </div>
-    <div class="scan-counter">
-      <div class="scan-counter-label">Free Scans Used</div>
-      <div class="scan-pips">
-        <div class="pip" id="pip1"></div>
-        <div class="pip" id="pip2"></div>
-        <div class="pip" id="pip3"></div>
-      </div>
     </div>
   </header>
 
@@ -381,29 +348,7 @@ footer { border-top: 1px solid var(--border); padding: 1.5rem 0; margin-top: 4re
   </footer>
 </div>
 
-<!-- Paywall modal -->
-<div class="modal-overlay" id="modal-overlay">
-  <div class="modal">
-    <div class="modal-body">
-      <div class="modal-eyebrow">You've used your 3 free scans</div>
-      <div class="modal-title">GO PRO. DRESS BETTER.</div>
-      <p class="modal-desc">Unlimited outfit ratings, detailed style breakdowns, and personalised upgrade recommendations.</p>
-      <div class="price-row">
-        <div class="price-amount">$4.99</div>
-        <div class="price-per">/ month</div>
-      </div>
-      <div class="perks">
-        <div class="perk"><div class="perk-dot"></div>Unlimited outfit scans</div>
-        <div class="perk"><div class="perk-dot"></div>Detailed style breakdown</div>
-        <div class="perk"><div class="perk-dot"></div>Personalised upgrade picks</div>
-        <div class="perk"><div class="perk-dot"></div>Style history &amp; trends</div>
-      </div>
-      <!-- Replace this href with your Stripe payment link -->
-      <a class="modal-cta" href="https://buy.stripe.com/YOUR_PAYMENT_LINK" target="_blank">UPGRADE FOR $4.99/MO</a>
-      <button class="modal-dismiss" id="modal-dismiss">Maybe later</button>
-    </div>
-  </div>
-</div>
+
 
 <script>
 // ══════════════════════════════════════════════
@@ -414,7 +359,7 @@ footer { border-top: 1px solid var(--border); padding: 1.5rem 0; margin-top: 4re
 const AMAZON_TAG = "YOUR-TAG-20";
 
 // 2. How many free scans before paywall
-const FREE_LIMIT = 3;
+
 
 // ══════════════════════════════════════════════
 //  Affiliate products
@@ -431,17 +376,6 @@ const AFFILIATES = [
 ];
 
 // ══════════════════════════════════════════════
-//  Scan counter (localStorage)
-// ══════════════════════════════════════════════
-function getScans() { return parseInt(localStorage.getItem('fitcheck_scans') || '0'); }
-function bumpScans() { localStorage.setItem('fitcheck_scans', getScans() + 1); }
-function updatePips() {
-  const used = getScans();
-  [1,2,3].forEach(i => {
-    document.getElementById(`pip${i}`).className = 'pip ' + (i <= used ? 'used' : 'empty');
-  });
-}
-updatePips();
 
 // ══════════════════════════════════════════════
 //  DOM
@@ -456,7 +390,7 @@ const loadingEl    = document.getElementById('loading');
 const resultsEl    = document.getElementById('results');
 const errorEl      = document.getElementById('error-msg');
 const tryAgainBtn  = document.getElementById('try-again-btn');
-const modalOverlay = document.getElementById('modal-overlay');
+
 
 let imageBase64 = null;
 let imageMimeType = null;
@@ -501,19 +435,13 @@ function resetUpload() {
 changeBtn.addEventListener('click', resetUpload);
 tryAgainBtn.addEventListener('click', resetUpload);
 
-// ══════════════════════════════════════════════
-//  Modal
-// ══════════════════════════════════════════════
-document.getElementById('modal-dismiss').addEventListener('click', () => {
-  modalOverlay.classList.remove('open');
-});
 
 // ══════════════════════════════════════════════
 //  Analyse
 // ══════════════════════════════════════════════
+
 analyzeBtn.addEventListener('click', async () => {
-  // Paywall check
-  if (getScans() >= FREE_LIMIT) { modalOverlay.classList.add('open'); return; }
+
   if (!imageBase64) return;
 
   analyzeBtn.disabled = true;
@@ -541,13 +469,7 @@ analyzeBtn.addEventListener('click', async () => {
       throw new Error(parsed.error || `API error ${res.status}`);
     }
 
-    bumpScans();
-    updatePips();
     renderResults(parsed);
-
-    if (getScans() >= FREE_LIMIT) {
-      analyzeBtn.textContent = '🔒 UPGRADE TO SCAN MORE';
-    }
 
   } catch (err) {
     showError('Error: ' + (err.message || 'Unknown error'));
@@ -555,8 +477,9 @@ analyzeBtn.addEventListener('click', async () => {
   } finally {
     loadingEl.style.display = 'none';
   }
-});
 
+});
+  
 // ══════════════════════════════════════════════
 //  Render
 // ══════════════════════════════════════════════
