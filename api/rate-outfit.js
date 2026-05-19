@@ -4,7 +4,6 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: "Method not allowed" });
     }
 
-    // Safely parse request body
     const body =
       typeof req.body === "string" ? JSON.parse(req.body) : req.body;
 
@@ -15,24 +14,23 @@ export default async function handler(req, res) {
     }
 
     const prompt = `
-You are a world-class fashion critic AI.
+You are a world-class fashion critic.
 
-Analyze the outfit and return ONLY valid JSON.
+Analyze the outfit and return ONLY valid JSON:
 
-JSON format:
 {
-  "score": number (1-10),
+  "score": 1-10,
   "verdict": "GOOD FIT" or "BAD FIT",
-  "subtitle": string,
-  "feedback": string,
-  "good_tags": string[],
-  "bad_tags": string[]
+  "subtitle": "short label",
+  "feedback": "detailed fashion critique",
+  "good_tags": ["..."],
+  "bad_tags": ["..."]
 }
 
 Rules:
-- Score must be based on real fashion sense (fit, color, style, coordination)
-- If score >= 7 → verdict MUST be "GOOD FIT"
-- If score < 7 → verdict MUST be "BAD FIT"
+- Score must be realistic based on fashion sense
+- If score >= 7 → GOOD FIT
+- If score < 7 → BAD FIT
 - Be honest but not toxic
 - Return ONLY JSON, no extra text
 `;
@@ -47,7 +45,6 @@ Rules:
         body: JSON.stringify({
           contents: [
             {
-              role: "user",
               parts: [
                 { text: prompt },
                 {
@@ -65,10 +62,10 @@ Rules:
 
     const data = await response.json();
 
-    // 🔥 HANDLE API ERRORS PROPERLY
-    if (!response.ok || data.error) {
-     return res.status(500).json({
-        error: "Gemini API error",
+    // 🔥 IMPORTANT: show real error if Gemini fails
+    if (!response.ok) {
+      return res.status(500).json({
+        error: "Gemini API failed",
         status: response.status,
         details: data,
       });
@@ -80,11 +77,10 @@ Rules:
     if (!text) {
       return res.status(500).json({
         error: "No AI response",
-        raw: data,
+        details: data,
       });
     }
 
-    // Parse AI JSON safely
     let parsed;
 
     try {
@@ -96,7 +92,6 @@ Rules:
       });
     }
 
-    // Safety clamp score
     parsed.score = Math.max(1, Math.min(10, parsed.score || 5));
 
     return res.status(200).json(parsed);
