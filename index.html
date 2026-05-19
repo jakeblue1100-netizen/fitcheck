@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FITCHECK — AI Outfit Rater</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&family=Syne+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080808;
+  --surface: #111111;
+  --surface2: #181818;
+  --border: rgba(255,255,255,0.07);
+  --border-bright: rgba(255,255,255,0.15);
+  --pink: #FF2D78;
+  --pink-dim: rgba(255,45,120,0.15);
+  --pink-glow: rgba(255,45,120,0.35);
+  --white: #F0EEE8;
+  --grey: #888;
+  --grey2: #555;
+  --green: #00E87A;
+  --yellow: #FFD600;
+  --red: #FF2D2D;
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-body: 'Syne', sans-serif;
+  --font-mono: 'Syne Mono', monospace;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--white);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Animated mesh background */
+.bg-mesh {
+  position: fixed; inset: 0;
+  z-index: 0; pointer-events: none; overflow: hidden;
+}
+.bg-mesh::before {
+  content: '';
+  position: absolute;
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(255,45,120,0.18) 0%, transparent 70%);
+  top: -200px; left: -150px;
+  animation: drift1 12s ease-in-out infinite alternate;
+}
+.bg-mesh::after {
+  content: '';
+  position: absolute;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(100,0,255,0.12) 0%, transparent 70%);
+  bottom: -100px; right: -100px;
+  animation: drift2 15s ease-in-out infinite alternate;
+}
+@keyframes drift1 { to { transform: translate(80px, 120px); } }
+@keyframes drift2 { to { transform: translate(-60px, -80px); } }
+
+/* Scanline overlay */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  pointer-events: none; z-index: 9999;
+}
+
+.page {
+  position: relative; z-index: 1;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1.5rem 5rem;
+}
+
+/* Header */
+header {
+  padding: 2.5rem 0 2rem;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 3.5rem;
+}
+
+.logo-wrap { display: flex; flex-direction: column; gap: 0; }
+
+.logo {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 8vw, 5.5rem);
+  letter-spacing: 0.02em; line-height: 0.85;
+  color: var(--white);
+}
+
+.logo-accent {
+  color: var(--pink);
+  position: relative; display: inline-block;
+}
+.logo-accent::after {
+  content: '';
+  position: absolute; inset: -2px -4px;
+  background: var(--pink-dim);
+  filter: blur(6px); border-radius: 2px; z-index: -1;
+}
+
+.logo-sub {
+  font-family: var(--font-mono);
+  font-size: 0.62rem; letter-spacing: 0.3em;
+  text-transform: uppercase; color: var(--grey);
+  margin-top: 0.4rem;
+}
+
+.scan-counter { display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem; }
+.scan-counter-label { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--grey2); }
+.scan-pips { display: flex; gap: 6px; }
+.pip { width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--grey2); transition: all 0.3s; }
+.pip.used { background: var(--pink); border-color: var(--pink); box-shadow: 0 0 8px var(--pink-glow); }
+
+/* Hero */
+.hero { margin-bottom: 2.5rem; animation: fadeUp 0.6s ease both; }
+@keyframes fadeUp { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform:none; } }
+.hero h1 { font-family: var(--font-display); font-size: clamp(2.2rem, 6vw, 4rem); line-height: 1; letter-spacing: 0.02em; margin-bottom: 0.8rem; }
+.hero h1 em { font-style: normal; color: var(--pink); }
+.hero p { color: var(--grey); font-size: 0.95rem; max-width: 480px; line-height: 1.6; }
+
+/* Upload zone */
+.upload-zone {
+  border: 1px solid var(--border-bright); border-radius: 2px;
+  padding: 3rem 2rem; text-align: center; cursor: pointer;
+  position: relative; overflow: hidden; transition: all 0.25s;
+  background: var(--surface); animation: fadeUp 0.6s 0.1s ease both;
+}
+.upload-zone::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, var(--pink-dim) 0%, transparent 60%);
+  opacity: 0; transition: opacity 0.3s;
+}
+.upload-zone:hover::before, .upload-zone.drag-over::before { opacity: 1; }
+.upload-zone:hover, .upload-zone.drag-over { border-color: var(--pink); }
+.upload-zone.drag-over { border-style: dashed; }
+.upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+
+.upload-icon-wrap {
+  width: 64px; height: 64px; border: 1px solid var(--border-bright);
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 1.2rem; font-size: 1.8rem;
+  position: relative; z-index: 1; background: var(--surface2); transition: all 0.3s;
+}
+.upload-zone:hover .upload-icon-wrap { border-color: var(--pink); box-shadow: 0 0 20px var(--pink-glow); }
+
+.upload-zone h2 { font-family: var(--font-display); font-size: 1.8rem; letter-spacing: 0.04em; margin-bottom: 0.4rem; position: relative; z-index: 1; }
+.upload-zone p { color: var(--grey); font-size: 0.82rem; letter-spacing: 0.08em; text-transform: uppercase; position: relative; z-index: 1; }
+
+/* Preview */
+#preview-container { display: none; position: relative; margin-bottom: 1.5rem; border: 1px solid var(--border-bright); border-radius: 2px; overflow: hidden; }
+#preview-img { width: 100%; max-height: 460px; object-fit: contain; background: #000; display: block; }
+
+.preview-overlay {
+  position: absolute; top: 0; left: 0; right: 0; padding: 0.75rem 1rem;
+  display: flex; justify-content: space-between; align-items: center;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
+}
+.preview-tag { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--grey); background: rgba(0,0,0,0.5); padding: 0.3rem 0.6rem; border: 1px solid var(--border); border-radius: 2px; }
+.change-btn { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--white); background: rgba(255,45,120,0.2); border: 1px solid var(--pink); padding: 0.3rem 0.75rem; border-radius: 2px; cursor: pointer; transition: all 0.2s; }
+.change-btn:hover { background: var(--pink); }
+
+/* Analyze button */
+#analyze-btn {
+  display: block; width: 100%; padding: 1.1rem;
+  background: var(--pink); color: #fff; border: none; border-radius: 2px;
+  font-family: var(--font-display); font-size: 1.5rem; letter-spacing: 0.1em;
+  cursor: pointer; position: relative; overflow: hidden; transition: all 0.2s;
+  margin-top: 1rem; animation: fadeUp 0.6s 0.2s ease both;
+}
+#analyze-btn::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.15) 50%, transparent 70%);
+  transform: translateX(-100%); transition: transform 0.4s;
+}
+#analyze-btn:hover::after { transform: translateX(100%); }
+#analyze-btn:hover { background: #ff1a6a; box-shadow: 0 0 30px var(--pink-glow); }
+#analyze-btn:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
+#analyze-btn:disabled::after { display: none; }
+
+/* Loading */
+#loading { display: none; padding: 4rem 2rem; text-align: center; }
+.loading-ring { width: 50px; height: 50px; border: 2px solid var(--border-bright); border-top-color: var(--pink); border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 1.5rem; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--grey); animation: pulse 1.5s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity:0.4; } 50% { opacity:1; } }
+
+/* Error */
+.error-msg { background: rgba(255,45,45,0.08); border: 1px solid rgba(255,45,45,0.25); color: var(--red); padding: 1rem 1.2rem; border-radius: 2px; font-size: 0.88rem; display: none; margin-top: 1rem; font-family: var(--font-mono); letter-spacing: 0.04em; }
+
+/* Results */
+#results { display: none; margin-top: 2rem; animation: fadeUp 0.5s ease; }
+
+.score-hero {
+  background: var(--surface); border: 1px solid var(--border-bright);
+  border-radius: 2px; padding: 2rem; margin-bottom: 1px;
+  display: grid; grid-template-columns: auto 1fr; gap: 2rem; align-items: center;
+  position: relative; overflow: hidden;
+}
+.score-hero::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; }
+.score-hero.tier-high::before { background: var(--green); }
+.score-hero.tier-mid::before  { background: var(--yellow); }
+.score-hero.tier-low::before  { background: var(--red); }
+
+.big-score { font-family: var(--font-display); font-size: clamp(4rem, 12vw, 7rem); line-height: 1; letter-spacing: -0.02em; }
+.tier-high .big-score { color: var(--green); text-shadow: 0 0 40px rgba(0,232,122,0.4); }
+.tier-mid  .big-score { color: var(--yellow); text-shadow: 0 0 40px rgba(255,214,0,0.4); }
+.tier-low  .big-score { color: var(--red); text-shadow: 0 0 40px rgba(255,45,45,0.4); }
+
+.score-denom { font-family: var(--font-mono); font-size: 0.7rem; color: var(--grey2); letter-spacing: 0.1em; margin-top: -0.5rem; }
+
+.score-verdict { font-family: var(--font-display); font-size: clamp(1.5rem, 4vw, 2.5rem); letter-spacing: 0.04em; margin-bottom: 0.4rem; }
+.score-subtitle { color: var(--grey); font-size: 0.88rem; line-height: 1.5; margin-bottom: 1.2rem; }
+
+.prog-bar-bg { height: 3px; background: var(--border-bright); border-radius: 2px; overflow: hidden; margin-bottom: 1rem; }
+.prog-bar-fill { height: 100%; width: 0; border-radius: 2px; transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1); }
+.tier-high .prog-bar-fill { background: linear-gradient(90deg, var(--green), #00ff88); }
+.tier-mid  .prog-bar-fill { background: linear-gradient(90deg, var(--yellow), #ffe840); }
+.tier-low  .prog-bar-fill { background: linear-gradient(90deg, var(--red), #ff6060); }
+
+.tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.tag { padding: 0.25rem 0.7rem; border-radius: 1px; font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; }
+.tag.good { background: rgba(0,232,122,0.1); color: var(--green); border: 1px solid rgba(0,232,122,0.2); }
+.tag.bad  { background: rgba(255,45,45,0.1); color: var(--red); border: 1px solid rgba(255,45,45,0.2); }
+
+.feedback-card { background: var(--surface); border: 1px solid var(--border); border-radius: 2px; padding: 1.5rem 2rem; margin-bottom: 1px; }
+.card-label { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--pink); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
+.card-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.feedback-text { font-size: 0.95rem; line-height: 1.75; color: #ccc; }
+
+/* Affiliate */
+#affiliate-section { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 2px; padding: 1.5rem 2rem; margin-top: 1.5rem; }
+.aff-header-row { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem; }
+.aff-title { font-family: var(--font-display); font-size: 1.8rem; letter-spacing: 0.04em; }
+.aff-badge { background: var(--pink-dim); border: 1px solid rgba(255,45,120,0.3); color: var(--pink); font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; padding: 0.25rem 0.6rem; border-radius: 1px; }
+.aff-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 1px; background: var(--border); }
+
+.aff-card { background: var(--bg); padding: 1.2rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0.5rem; transition: all 0.2s; position: relative; overflow: hidden; }
+.aff-card::before { content: ''; position: absolute; inset: 0; background: var(--pink-dim); opacity: 0; transition: opacity 0.2s; }
+.aff-card:hover::before { opacity: 1; }
+.aff-emoji { font-size: 1.5rem; position: relative; z-index: 1; }
+.aff-name { font-weight: 700; font-size: 0.85rem; position: relative; z-index: 1; }
+.aff-desc { font-size: 0.75rem; color: var(--grey); line-height: 1.4; flex: 1; position: relative; z-index: 1; }
+.aff-cta { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pink); position: relative; z-index: 1; transition: letter-spacing 0.2s; }
+.aff-card:hover .aff-cta { letter-spacing: 0.15em; }
+
+/* Try again */
+#try-again-btn { display: none; margin-top: 1.5rem; background: none; border: 1px solid var(--border-bright); padding: 0.7rem 1.4rem; color: var(--grey); border-radius: 2px; cursor: pointer; font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; transition: all 0.2s; }
+#try-again-btn:hover { border-color: var(--pink); color: var(--pink); }
+
+/* Paywall Modal */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 500; align-items: center; justify-content: center; padding: 1.5rem; backdrop-filter: blur(8px); }
+.modal-overlay.open { display: flex; }
+
+.modal { background: var(--surface); border: 1px solid var(--border-bright); border-radius: 2px; max-width: 460px; width: 100%; position: relative; overflow: hidden; animation: modalIn 0.35s cubic-bezier(0.16,1,0.3,1); }
+@keyframes modalIn { from { opacity:0; transform: scale(0.92) translateY(20px); } to { opacity:1; transform:none; } }
+.modal::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--pink), #9b5de5, var(--pink)); background-size: 200%; animation: gradientShift 3s linear infinite; }
+@keyframes gradientShift { to { background-position: 200% center; } }
+
+.modal-body { padding: 2.5rem 2rem; }
+.modal-eyebrow { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--pink); margin-bottom: 1rem; }
+.modal-title { font-family: var(--font-display); font-size: 2.5rem; letter-spacing: 0.03em; line-height: 1; margin-bottom: 0.8rem; }
+.modal-desc { color: var(--grey); font-size: 0.88rem; line-height: 1.6; margin-bottom: 2rem; }
+.price-row { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 1.5rem; }
+.price-amount { font-family: var(--font-display); font-size: 3rem; color: var(--white); line-height: 1; }
+.price-per { font-size: 0.8rem; color: var(--grey); }
+.perks { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 2rem; }
+.perk { display: flex; align-items: center; gap: 0.75rem; font-size: 0.88rem; color: #ccc; }
+.perk-dot { width: 6px; height: 6px; background: var(--pink); border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 8px var(--pink-glow); }
+
+.modal-cta { display: block; width: 100%; padding: 1rem; background: var(--pink); color: #fff; border: none; border-radius: 2px; font-family: var(--font-display); font-size: 1.4rem; letter-spacing: 0.08em; cursor: pointer; transition: all 0.2s; margin-bottom: 0.75rem; text-align: center; text-decoration: none; }
+.modal-cta:hover { background: #ff1a6a; box-shadow: 0 0 25px var(--pink-glow); }
+.modal-dismiss { display: block; width: 100%; padding: 0.7rem; background: none; border: 1px solid var(--border); color: var(--grey); border-radius: 2px; font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+.modal-dismiss:hover { border-color: var(--grey); color: var(--white); }
+
+/* Footer */
+footer { border-top: 1px solid var(--border); padding: 1.5rem 0; margin-top: 4rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+.footer-copy { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--grey2); }
+.footer-links { display: flex; gap: 1.5rem; }
+.footer-links a { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--grey2); text-decoration: none; transition: color 0.2s; }
+.footer-links a:hover { color: var(--pink); }
+
+@media (max-width: 560px) {
+  .score-hero { grid-template-columns: 1fr; gap: 1rem; }
+  .aff-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+<script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+
+<div class="bg-mesh"></div>
+
+<div class="page">
+  <header>
+    <div class="logo-wrap">
+      <div class="logo">FIT<span class="logo-accent">CHECK</span></div>
+      <div class="logo-sub">AI Fashion Intelligence</div>
+    </div>
+    <div class="scan-counter">
+      <div class="scan-counter-label">Free Scans Used</div>
+      <div class="scan-pips">
+        <div class="pip" id="pip1"></div>
+        <div class="pip" id="pip2"></div>
+        <div class="pip" id="pip3"></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="hero">
+    <h1>Rate Your Fit.<br><em>Brutally Honest.</em></h1>
+    <p>Upload your outfit and our AI gives you a real score out of 10 — no filter, no fluff. Low scores get upgrade recommendations.</p>
+  </div>
+
+  <div class="upload-zone" id="upload-zone">
+    <input type="file" id="file-input" accept="image/*" />
+    <div class="upload-icon-wrap">📸</div>
+    <h2>DROP YOUR FIT</h2>
+    <p>Tap or drag · JPG, PNG, WEBP</p>
+  </div>
+
+  <div id="preview-container">
+    <img id="preview-img" alt="Your outfit" />
+    <div class="preview-overlay">
+      <span class="preview-tag">Ready to scan</span>
+      <button class="change-btn" id="change-btn">Change Photo</button>
+    </div>
+  </div>
+
+  <button id="analyze-btn" disabled>RATE MY FIT →</button>
+
+  <div id="loading">
+    <div class="loading-ring"></div>
+    <div class="loading-text">Analysing your look…</div>
+  </div>
+
+  <div class="error-msg" id="error-msg"></div>
+
+  <div id="results">
+    <div class="score-hero" id="score-hero">
+      <div>
+        <div class="big-score" id="big-score">0</div>
+        <div class="score-denom">OUT OF 10</div>
+      </div>
+      <div class="score-meta">
+        <div class="score-verdict" id="score-verdict">—</div>
+        <div class="score-subtitle" id="score-subtitle">—</div>
+        <div class="prog-bar-bg"><div class="prog-bar-fill" id="prog-bar"></div></div>
+        <div class="tags" id="tags"></div>
+      </div>
+    </div>
+
+    <div class="feedback-card">
+      <div class="card-label">The Verdict</div>
+      <p class="feedback-text" id="feedback-text"></p>
+    </div>
+
+    <div id="affiliate-section">
+      <div class="aff-header-row">
+        <div class="aff-title">UPGRADE YOUR LOOK</div>
+        <div class="aff-badge">AI Picked</div>
+      </div>
+      <div class="aff-grid" id="aff-grid"></div>
+    </div>
+  </div>
+
+  <button id="try-again-btn">← Scan another fit</button>
+
+  <footer>
+    <div class="footer-copy">© 2025 FitCheck · Powered by Gemini AI</div>
+    <div class="footer-links">
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+      <a href="mailto:you@email.com">Contact</a>
+    </div>
+  </footer>
+</div>
+
+<!-- Paywall modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-body">
+      <div class="modal-eyebrow">You've used your 3 free scans</div>
+      <div class="modal-title">GO PRO. DRESS BETTER.</div>
+      <p class="modal-desc">Unlimited outfit ratings, detailed style breakdowns, and personalised upgrade recommendations.</p>
+      <div class="price-row">
+        <div class="price-amount">$4.99</div>
+        <div class="price-per">/ month</div>
+      </div>
+      <div class="perks">
+        <div class="perk"><div class="perk-dot"></div>Unlimited outfit scans</div>
+        <div class="perk"><div class="perk-dot"></div>Detailed style breakdown</div>
+        <div class="perk"><div class="perk-dot"></div>Personalised upgrade picks</div>
+        <div class="perk"><div class="perk-dot"></div>Style history &amp; trends</div>
+      </div>
+      <!-- Replace this href with your Stripe payment link -->
+      <a class="modal-cta" href="https://buy.stripe.com/YOUR_PAYMENT_LINK" target="_blank">UPGRADE FOR $4.99/MO</a>
+      <button class="modal-dismiss" id="modal-dismiss">Maybe later</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  ⚙️  YOUR CONFIGURATION — edit these 2 things
+// ══════════════════════════════════════════════
+
+// 1. Your Amazon affiliate tag
+const AMAZON_TAG = "YOUR-TAG-20";
+
+// 2. How many free scans before paywall
+const FREE_LIMIT = 3;
+
+// ══════════════════════════════════════════════
+//  Affiliate products
+// ══════════════════════════════════════════════
+const AFFILIATES = [
+  { emoji:"👟", name:"White Low Sneakers",    desc:"The cheat code of outfits. Goes with anything.",   cta:"Shop Amazon", url:`https://www.amazon.com/s?k=white+sneakers&tag=${AMAZON_TAG}` },
+  { emoji:"🧥", name:"Minimal Overshirt",     desc:"Adds instant structure and layering game.",         cta:"Shop Amazon", url:`https://www.amazon.com/s?k=overshirt&tag=${AMAZON_TAG}` },
+  { emoji:"👖", name:"Slim Tapered Chinos",   desc:"Smarter than jeans. More relaxed than trousers.",  cta:"Shop Amazon", url:`https://www.amazon.com/s?k=slim+chinos&tag=${AMAZON_TAG}` },
+  { emoji:"🕶️", name:"Classic Sunglasses",   desc:"The easiest finishing touch you can add.",          cta:"Shop Amazon", url:`https://www.amazon.com/s?k=classic+sunglasses&tag=${AMAZON_TAG}` },
+  { emoji:"👜", name:"Structured Tote Bag",   desc:"Elevates casual looks without trying.",             cta:"Shop Amazon", url:`https://www.amazon.com/s?k=structured+tote+bag&tag=${AMAZON_TAG}` },
+  { emoji:"🧣", name:"Neutral Knit Scarf",    desc:"Adds texture and warmth. Always in style.",        cta:"Shop Amazon", url:`https://www.amazon.com/s?k=neutral+knit+scarf&tag=${AMAZON_TAG}` },
+  { emoji:"⌚", name:"Minimalist Watch",      desc:"One accessory that says you have taste.",           cta:"Shop Amazon", url:`https://www.amazon.com/s?k=minimalist+watch&tag=${AMAZON_TAG}` },
+  { emoji:"🧴", name:"Fragrance Starter Set", desc:"Invisible but unforgettable. Complete the look.",  cta:"Shop Amazon", url:`https://www.amazon.com/s?k=fragrance+gift+set&tag=${AMAZON_TAG}` },
+];
+
+// ══════════════════════════════════════════════
+//  Scan counter (localStorage)
+// ══════════════════════════════════════════════
+function getScans() { return parseInt(localStorage.getItem('fitcheck_scans') || '0'); }
+function bumpScans() { localStorage.setItem('fitcheck_scans', getScans() + 1); }
+function updatePips() {
+  const used = getScans();
+  [1,2,3].forEach(i => {
+    document.getElementById(`pip${i}`).className = 'pip ' + (i <= used ? 'used' : 'empty');
+  });
+}
+updatePips();
+
+// ══════════════════════════════════════════════
+//  DOM
+// ══════════════════════════════════════════════
+const uploadZone   = document.getElementById('upload-zone');
+const fileInput    = document.getElementById('file-input');
+const previewCont  = document.getElementById('preview-container');
+const previewImg   = document.getElementById('preview-img');
+const changeBtn    = document.getElementById('change-btn');
+const analyzeBtn   = document.getElementById('analyze-btn');
+const loadingEl    = document.getElementById('loading');
+const resultsEl    = document.getElementById('results');
+const errorEl      = document.getElementById('error-msg');
+const tryAgainBtn  = document.getElementById('try-again-btn');
+const modalOverlay = document.getElementById('modal-overlay');
+
+let imageBase64 = null;
+let imageMimeType = null;
+
+// ══════════════════════════════════════════════
+//  File handling
+// ══════════════════════════════════════════════
+function handleFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  imageMimeType = file.type;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    imageBase64 = e.target.result.split(',')[1];
+    previewImg.src = e.target.result;
+    uploadZone.style.display = 'none';
+    previewCont.style.display = 'block';
+    analyzeBtn.disabled = false;
+    resultsEl.style.display = 'none';
+    document.getElementById('affiliate-section').style.display = 'none';
+    tryAgainBtn.style.display = 'none';
+    errorEl.style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', (e) => { e.preventDefault(); uploadZone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
+
+function resetUpload() {
+  imageBase64 = null; imageMimeType = null;
+  previewCont.style.display = 'none';
+  uploadZone.style.display = 'block';
+  analyzeBtn.disabled = true;
+  resultsEl.style.display = 'none';
+  document.getElementById('affiliate-section').style.display = 'none';
+  tryAgainBtn.style.display = 'none';
+  fileInput.value = '';
+  errorEl.style.display = 'none';
+}
+changeBtn.addEventListener('click', resetUpload);
+tryAgainBtn.addEventListener('click', resetUpload);
+
+// ══════════════════════════════════════════════
+//  Modal
+// ══════════════════════════════════════════════
+document.getElementById('modal-dismiss').addEventListener('click', () => {
+  modalOverlay.classList.remove('open');
+});
+
+// ══════════════════════════════════════════════
+//  Analyse
+// ══════════════════════════════════════════════
+analyzeBtn.addEventListener('click', async () => {
+  // Paywall check
+  if (getScans() >= FREE_LIMIT) { modalOverlay.classList.add('open'); return; }
+  if (!imageBase64) return;
+
+  analyzeBtn.disabled = true;
+  loadingEl.style.display = 'block';
+  resultsEl.style.display = 'none';
+  errorEl.style.display = 'none';
+  tryAgainBtn.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/rate-outfit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64, imageMimeType })
+    });
+
+    let parsed;
+
+    try {
+      parsed = await res.json();
+    } catch (e) {
+      throw new Error('Server returned invalid JSON');
+    }
+
+    if (!res.ok || parsed.error) {
+      throw new Error(parsed.error || `API error ${res.status}`);
+    }
+
+    bumpScans();
+    updatePips();
+    renderResults(parsed);
+
+    if (getScans() >= FREE_LIMIT) {
+      analyzeBtn.textContent = '🔒 UPGRADE TO SCAN MORE';
+    }
+
+  } catch (err) {
+    showError('Error: ' + (err.message || 'Unknown error'));
+    analyzeBtn.disabled = false;
+  } finally {
+    loadingEl.style.display = 'none';
+  }
+});
+
+// ══════════════════════════════════════════════
+//  Render
+// ══════════════════════════════════════════════
+function renderResults(data) {
+  const score = Math.max(1, Math.min(10, parseInt(data.score) || 5));
+  const tier = score >= 8 ? 'high' : score >= 5 ? 'mid' : 'low';
+
+  document.getElementById('score-hero').className = `score-hero tier-${tier}`;
+
+  // Count-up animation
+  const el = document.getElementById('big-score');
+  let cur = 0;
+  const iv = setInterval(() => { el.textContent = ++cur; if (cur >= score) clearInterval(iv); }, 80);
+
+  document.getElementById('score-verdict').textContent  = data.verdict  || '';
+  document.getElementById('score-subtitle').textContent = data.subtitle || '';
+  document.getElementById('feedback-text').textContent  = data.feedback || '';
+
+  setTimeout(() => { document.getElementById('prog-bar').style.width = `${score * 10}%`; }, 100);
+
+  const tagsEl = document.getElementById('tags');
+  tagsEl.innerHTML = '';
+  (data.good_tags || []).forEach(t => { tagsEl.innerHTML += `<span class="tag good">✓ ${t}</span>`; });
+  (data.bad_tags  || []).forEach(t => { tagsEl.innerHTML += `<span class="tag bad">↑ ${t}</span>`; });
+
+  const affEl = document.getElementById('affiliate-section');
+  if (score < 7) {
+    affEl.style.display = 'block';
+    const grid = document.getElementById('aff-grid');
+    grid.innerHTML = '';
+    [...AFFILIATES].sort(() => 0.5 - Math.random()).slice(0, 4).forEach(item => {
+      grid.innerHTML += `
+        <a class="aff-card" href="${item.url}" target="_blank" rel="noopener sponsored">
+          <span class="aff-emoji">${item.emoji}</span>
+          <span class="aff-name">${item.name}</span>
+          <span class="aff-desc">${item.desc}</span>
+          <span class="aff-cta">${item.cta} →</span>
+        </a>`;
+    });
+  } else {
+    affEl.style.display = 'none';
+  }
+
+  resultsEl.style.display = 'block';
+  tryAgainBtn.style.display = 'inline-block';
+  analyzeBtn.disabled = false;
+  resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function showError(msg) {
+  errorEl.textContent = '⚠ ' + msg;
+  errorEl.style.display = 'block';
+  loadingEl.style.display = 'none';
+}
+</script>
+</body>
+</html>
