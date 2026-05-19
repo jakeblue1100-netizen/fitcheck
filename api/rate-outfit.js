@@ -23,13 +23,7 @@ export default async function handler(req, res) {
 
     const score = Math.floor(Math.random() * 10) + 1;
 
-    return res.status(200).json({
-      score,
-      verdict: "Test working — backend connected",
-      subtitle: "AI Style Analysis",
-      feedback: "Your API route is now correctly deployed.",
-      good_tags: ["Working"],
-      bad_tags: []
+    
     });
 
   } catch (err) {
