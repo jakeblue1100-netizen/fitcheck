@@ -13,24 +13,26 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "No image provided" });
     }
 
-    const prompt = `
-You are a fashion critic AI.
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: "Missing GEMINI_API_KEY on server" });
+    }
 
-Analyze this outfit image and respond ONLY in valid JSON:
+    const prompt = `
+Return ONLY valid JSON.
+
+Analyze this outfit and respond:
 
 {
-  "score": number from 1-10,
-  "verdict": short opinion (1 sentence),
+  "score": 1-10 number,
+  "verdict": "short opinion",
   "subtitle": "AI Style Analysis",
-  "feedback": detailed critique (2-4 sentences),
-  "good_tags": array of 2-4 strengths,
-  "bad_tags": array of 2-4 weaknesses
+  "feedback": "2-3 sentences critique",
+  "good_tags": ["..."],
+  "bad_tags": ["..."]
 }
-
-Be brutally honest but not rude.
 `;
 
-    const geminiRes = await fetch(
+    const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
         method: "POST",
@@ -42,7 +44,7 @@ Be brutally honest but not rude.
                 { text: prompt },
                 {
                   inline_data: {
-                    mime_type: imageMimeType,
+                    mime_type: imageMimeType || "image/jpeg",
                     data: imageBase64,
                   },
                 },
@@ -53,31 +55,30 @@ Be brutally honest but not rude.
       }
     );
 
-    const data = await geminiRes.json();
+    const raw = await response.json();
 
-    if (!geminiRes.ok) {
+    if (!response.ok) {
       return res.status(500).json({
         error: "Gemini API failed",
-        details: data,
+        details: raw,
       });
     }
 
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const text = raw?.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!text) {
       return res.status(500).json({
-        error: "No AI response",
-        raw: data,
+        error: "No text returned from Gemini",
+        raw,
       });
     }
 
-    // clean JSON from AI output
     let parsed;
     try {
       parsed = JSON.parse(text);
     } catch (e) {
       return res.status(500).json({
-        error: "AI returned invalid JSON",
+        error: "Gemini returned non-JSON output",
         raw: text,
       });
     }
@@ -85,7 +86,7 @@ Be brutally honest but not rude.
     return res.status(200).json(parsed);
   } catch (err) {
     return res.status(500).json({
-      error: "Server error",
+      error: "Server crash",
       details: err.message,
     });
   }
