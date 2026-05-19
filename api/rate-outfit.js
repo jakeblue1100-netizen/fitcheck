@@ -31,7 +31,11 @@ Analyze this outfit and respond:
   "bad_tags": ["..."]
 }
 `;
-
+      if (!process.env.GEMINI_API_KEY) {
+    return res.status(500).json({
+      error: "Missing API key on Vercel"
+    });
+  }
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
